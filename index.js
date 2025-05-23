@@ -39,7 +39,66 @@ async function run() {
 
     // Basic route to confirm server is running
     app.get('/', (req, res) => {
-      res.send('GigConnect Server is running and connected to DB!');
+      const htmlResponse = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-S">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>GigConnect Server - Online</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+              display: flex;
+              flex-direction: column; /* Align items vertically */
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Vibrant gradient background */
+              color: #ffffff; /* White text for contrast */
+              text-align: center;
+              overflow: hidden; /* Prevent scrollbars from gradient edges */
+            }
+            .container {
+              text-align: center;
+              padding: 20px; /* Adjusted padding */
+            }
+            h1 {
+              font-size: 5.5rem; /* Larger heading */
+              margin-bottom: 0.5em;
+              font-weight: 300; /* Lighter font weight */
+              letter-spacing: 1px;
+              text-shadow: 2px 2px 4px rgba(0,0,0,0.2); /* Subtle text shadow */
+            }
+            p {
+              font-size: 1.5rem; /* Larger paragraph text */
+              margin-bottom: 1em;
+              font-weight: 300;
+            }
+            .status-dot {
+              height: 15px;
+              width: 15px;
+              background-color: #4CAF50; /* Green dot for online status */
+              border-radius: 50%;
+              display: inline-block;
+              margin-right: 10px;
+              box-shadow: 0 0 20px #4CAF50, 0 0 40px #4CAF50; /* Glow effect */
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>GigConnect Server</h1>
+            <p><span class="status-dot"></span>Online & Connected to MongoDB Database.</p>
+            <p><small>API Version: v.1.0</small></p>
+          </div>
+        </body>
+        </html>
+      `;
+      res.setHeader('Content-Type', 'text/html');
+      res.status(200).send(htmlResponse);
     });
 
     // --- Task API Endpoints ---
@@ -55,7 +114,7 @@ async function run() {
         }
 
         // Enhanced Validation
-        const requiredFields = ['title', 'category', 'budget', 'deadline', 'description', 'creatorEmail'];
+        const requiredFields = ['title', 'category', 'budget', 'deadline', 'description', 'creatorEmail', 'creatorName']; // Added creatorName
         const missingFields = requiredFields.filter(field => !(field in taskData) || !taskData[field]);
 
         if (missingFields.length > 0) {
@@ -173,9 +232,12 @@ async function run() {
         // Removed _id from updatePayload if present, as it shouldn't be updated
         delete updatePayload._id;
 
-        // Prevented creatorEmail (and creatorName if it existed) from being updated
+        // Prevented creatorEmail and creatorName from being updated
         if (updatePayload.hasOwnProperty('creatorEmail')) {
           delete updatePayload.creatorEmail; // Deleted from the copy
+        }
+        if (updatePayload.hasOwnProperty('creatorName')) {
+          delete updatePayload.creatorName; // Deleted from the copy
         }
         // Added a timestamp for the update
         updatePayload.updatedAt = new Date();
@@ -364,3 +426,6 @@ async function run() {
   }
 }
 run().catch(console.dir);
+
+
+
