@@ -1,6 +1,10 @@
-node_modules
+# Dependencies
+/node_modules
+
+# Environment variables
 .env
 
+# Separate color scheme set by Peacock extension for server side for VS Code.
 .vscode
 
 
