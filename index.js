@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb'); // ObjectId will be useful
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -12,7 +12,7 @@ app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.eyxn1x.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+// Created a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -23,16 +23,16 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server
+    // Connected the client to the server
     await client.connect();
     console.log("Successfully connected to MongoDB!"); // Updated log
 
-    // Define database and collections
-    const database = client.db("gigConnectDB"); // You can name your database
+    // Defined database and collections
+    const database = client.db("gigConnectDB");
     const tasksCollection = database.collection("tasks");
     const bidsCollection = database.collection("bids");
 
-    // Make collections accessible to routes by attaching to app.locals
+    // Made collections accessible to routes by attaching to app.locals
     app.locals.tasksCollection = tasksCollection;
     app.locals.bidsCollection = bidsCollection;
 
@@ -44,7 +44,7 @@ async function run() {
 
     // --- Task API Endpoints ---
 
-    // POST a new task
+    // POSTing a new task
     app.post('/api/v1/tasks', async (req, res) => {
       const { tasksCollection } = req.app.locals;
       try {
@@ -62,26 +62,26 @@ async function run() {
           return res.status(400).send({ message: `Missing required task fields: ${missingFields.join(', ')}.` });
         }
 
-        // Validate budget
+        // Validated budget
         if (typeof taskData.budget !== 'number' || taskData.budget <= 0) {
           return res.status(400).send({ message: 'Budget must be a positive number.' });
         }
 
-        // Validate category
-        const allowedCategories = ['Web Development', 'Graphic Design', 'Digital Marketing', 'Writing & Translation', 'Video & Animation', 'General']; // Add 'General' or adjust as needed
+        // Validated category
+        const allowedCategories = ['Web Development', 'Graphic Design', 'Digital Marketing', 'Writing & Translation', 'Video & Animation', 'General'];
         if (!allowedCategories.includes(taskData.category)) {
           return res.status(400).send({ message: `Invalid category. Allowed categories are: ${allowedCategories.join(', ')}.` });
         }
 
-        // Validate deadline
+        // Validated deadline
         const deadlineDate = new Date(taskData.deadline);
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Set today to the beginning of the day for comparison
+        today.setHours(0, 0, 0, 0); // Did set today to the beginning of the day for comparison
 
         if (isNaN(deadlineDate.getTime()) || deadlineDate < today) {
           return res.status(400).send({ message: 'Deadline must be a valid date and set to a future date.' });
         }
-        // Add a timestamp for when the task was created
+        // Added a timestamp for when the task was created
         taskData.createdAt = new Date();
 
         const result = await tasksCollection.insertOne(taskData);
@@ -92,7 +92,7 @@ async function run() {
       }
     });
 
-    // GET all tasks
+    // GETting all tasks
     app.get('/api/v1/tasks', async (req, res) => {
       const { tasksCollection } = req.app.locals;
       const page = parseInt(req.query.page) || 1; // Default to page 1
@@ -120,7 +120,7 @@ async function run() {
       }
     });
 
-    // GET featured tasks (top 6 by soonest deadline)
+    // GETting featured tasks (top 6 by soonest deadline)
     app.get('/api/v1/featured-tasks', async (req, res) => {
       const { tasksCollection } = req.app.locals;
       try {
@@ -135,7 +135,7 @@ async function run() {
       }
     });
 
-    // GET a single task by ID
+    // GETting a single task by ID
     app.get('/api/v1/tasks/:id', async (req, res) => {
       const { tasksCollection } = req.app.locals;
       const { id } = req.params;
@@ -154,11 +154,11 @@ async function run() {
       }
     });
 
-    // PUT (update) a task by ID
+    // PUTting (updating) a task by ID
     app.put('/api/v1/tasks/:id', async (req, res) => {
       const { tasksCollection } = req.app.locals;
       const { id } = req.params;
-      // Create a shallow copy of req.body to safely modify
+      // Created a shallow copy of req.body to safely modify
       const updatePayload = { ...req.body };
 
 
@@ -166,23 +166,23 @@ async function run() {
         if (!ObjectId.isValid(id)) {
           return res.status(400).send({ message: 'Invalid Task ID format.' });
         }
-        if (Object.keys(updatePayload).length === 0) { // Check the copy
+        if (Object.keys(updatePayload).length === 0) { // Checked the copy
             return res.status(400).send({ message: 'Request body is empty. No update data provided.' });
         }
 
-        // Remove _id from updatePayload if present, as it shouldn't be updated
+        // Removed _id from updatePayload if present, as it shouldn't be updated
         delete updatePayload._id;
 
-        // Prevent creatorEmail (and creatorName if it existed) from being updated
+        // Prevented creatorEmail (and creatorName if it existed) from being updated
         if (updatePayload.hasOwnProperty('creatorEmail')) {
-          delete updatePayload.creatorEmail; // Delete from the copy
+          delete updatePayload.creatorEmail; // Deleted from the copy
         }
-        // Add a timestamp for the update
+        // Added a timestamp for the update
         updatePayload.updatedAt = new Date();
 
         const result = await tasksCollection.updateOne(
           { _id: new ObjectId(id) },
-          { $set: updatePayload } // Use the modified copy
+          { $set: updatePayload } // Used the modified copy
         );
 
         if (result.matchedCount === 0) {
@@ -198,7 +198,7 @@ async function run() {
       }
     });
 
-    // DELETE a task by ID
+    // DELETEd a task by ID
     app.delete('/api/v1/tasks/:id', async (req, res) => {
       const { tasksCollection } = req.app.locals;
       const { id } = req.params;
@@ -217,7 +217,7 @@ async function run() {
       }
     });
 
-    // GET all tasks posted by a specific user
+    // GETting all tasks posted by a specific user
     app.get('/api/v1/my-posted-tasks', async (req, res) => {
       const { tasksCollection } = req.app.locals;
       const { creatorEmail } = req.query; // Expecting email as a query parameter
@@ -228,7 +228,7 @@ async function run() {
 
       try {
         const postedTasks = await tasksCollection.find({ creatorEmail: creatorEmail })
-                                              .sort({ createdAt: -1 }) // Show newest first
+                                              .sort({ createdAt: -1 }) // Showed newest first
                                               .toArray();
         res.status(200).send(postedTasks);
       } catch (error) {
@@ -239,7 +239,7 @@ async function run() {
 
     // --- Bid API Endpoints ---
 
-    // POST a new bid on a specific task
+    // POSTting a new bid on a specific task
     app.post('/api/v1/tasks/:taskId/bids', async (req, res) => {
       const { tasksCollection, bidsCollection } = req.app.locals;
       const { taskId } = req.params;
@@ -250,7 +250,7 @@ async function run() {
           return res.status(400).send({ message: 'Invalid Task ID format.' });
         }
 
-        // Check if the task exists
+        // Checked if the task exists
         const task = await tasksCollection.findOne({ _id: new ObjectId(taskId) });
         if (!task) {
           return res.status(404).send({ message: 'Task not found. Cannot place bid.' });
@@ -276,12 +276,12 @@ async function run() {
           return res.status(400).send({ message: `Missing required bid fields: ${missingBidFields.join(', ')}.` });
         }
 
-        // Validate biddingAmount
+        // Validated biddingAmount
         if (typeof bidData.biddingAmount !== 'number' || bidData.biddingAmount <= 0) {
           return res.status(400).send({ message: 'Bidding amount must be a positive number.' });
         }
 
-        // Validate bidderDeadline if provided
+        // Validated bidderDeadline if provided
         if (bidData.bidderDeadline) {
           const bidderDeadlineDate = new Date(bidData.bidderDeadline);
           if (isNaN(bidderDeadlineDate.getTime())) {
@@ -308,7 +308,7 @@ async function run() {
       }
     });
 
-    // GET all bids for a specific task
+    // GETting all bids for a specific task
     app.get('/api/v1/tasks/:taskId/bids', async (req, res) => {
       const { bidsCollection } = req.app.locals;
       const { taskId } = req.params;
@@ -329,7 +329,7 @@ async function run() {
       }
     });
 
-    // GET all bids made by a specific user (bidder)
+    // GETting all bids made by a specific user (bidder)
     app.get('/api/v1/my-bids', async (req, res) => {
       const { bidsCollection } = req.app.locals;
       const bidderEmail = req.query.bidderEmail;
@@ -339,10 +339,10 @@ async function run() {
       }
 
       try {
-        // Find all bids where the bidderEmail matches
-        const myBids = await bidsCollection.find({ bidderEmail: bidderEmail }).sort({ bidPlacedAt: -1 }).toArray(); // Sort by newest bid first
+        // Finding all bids where the bidderEmail matches
+        const myBids = await bidsCollection.find({ bidderEmail: bidderEmail }).sort({ bidPlacedAt: -1 }).toArray(); // Sorted by newest bid first
 
-        // Send the array of bids (could be empty)
+        // Sending the array of bids (could be empty)
         res.status(200).send(myBids);
 
       } catch (error) {
@@ -351,14 +351,14 @@ async function run() {
       }
     });
 
-    // Start the server only after a successful DB connection
+    // Starting the server only after a successful DB connection
     app.listen(port, () => {
       console.log(`GigConnect server is listening on port ${port}`);
     });
 
   } finally {
-    // Ensures that the client will close when you finish/error
-    // For a long-running server, you typically don't close the client here.
+    // Ensures that the client will close when I finish/error
+    // For a long-running server, I typically don't close the client here.
     // It will close when the Node.js process terminates.
     // await client.close();
   }
