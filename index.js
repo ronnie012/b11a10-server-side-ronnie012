@@ -95,9 +95,25 @@ async function run() {
     // GET all tasks
     app.get('/api/v1/tasks', async (req, res) => {
       const { tasksCollection } = req.app.locals;
+      const page = parseInt(req.query.page) || 1; // Default to page 1
+      const limit = parseInt(req.query.limit) || 10; // Default to 10 tasks per page
+      const skip = (page - 1) * limit;
+
       try {
-        const tasks = await tasksCollection.find({}).sort({ deadline: 1 }).toArray(); // Sort by deadline, soonest first
-        res.status(200).send(tasks);
+        // Get the total count of tasks for pagination metadata
+        const totalTasks = await tasksCollection.countDocuments({});
+
+        const tasks = await tasksCollection.find({})
+                                           .sort({ deadline: 1 }) // Sort by deadline, soonest first
+                                           .skip(skip)
+                                           .limit(limit)
+                                           .toArray();
+        res.status(200).send({
+          tasks,
+          totalTasks,
+          totalPages: Math.ceil(totalTasks / limit),
+          currentPage: page
+        });
       } catch (error) {
         console.error('Error fetching tasks:', error);
         res.status(500).send({ message: 'An internal server error occurred while fetching tasks.', dev_details: error.message });
