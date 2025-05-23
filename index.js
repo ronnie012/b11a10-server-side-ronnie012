@@ -31,13 +31,11 @@ async function run() {
     const database = client.db("gigConnectDB"); // You can name your database
     const tasksCollection = database.collection("tasks");
     const bidsCollection = database.collection("bids");
-    // Potentially a usersCollection if you store additional user profile info beyond Firebase Auth
-    // const usersCollection = database.collection("users");
 
     // Make collections accessible to routes by attaching to app.locals
     app.locals.tasksCollection = tasksCollection;
     app.locals.bidsCollection = bidsCollection;
-    // app.locals.usersCollection = usersCollection;
+
 
     // Basic route to confirm server is running
     app.get('/', (req, res) => {
@@ -50,14 +48,38 @@ async function run() {
     app.post('/api/v1/tasks', async (req, res) => {
       const { tasksCollection } = req.app.locals;
       try {
-        // console.log('Received request body for POST /api/v1/tasks:', req.body); // Diagnostic log removed or keep if needed for debugging
         const taskData = req.body;
-        // Basic validation (can be expanded later)
-        if (!taskData) { // More specific check if req.body wasn't parsed
+
+        if (!taskData) {
           return res.status(400).send({ message: 'Request body is missing or not in JSON format. Ensure Content-Type is application/json.' });
         }
-        if (!taskData.title || !taskData.category || !taskData.budget || !taskData.deadline || !taskData.description || !taskData.creatorEmail) {
-          return res.status(400).send({ message: 'Missing required task fields.' });
+
+        // Enhanced Validation
+        const requiredFields = ['title', 'category', 'budget', 'deadline', 'description', 'creatorEmail'];
+        const missingFields = requiredFields.filter(field => !(field in taskData) || !taskData[field]);
+
+        if (missingFields.length > 0) {
+          return res.status(400).send({ message: `Missing required task fields: ${missingFields.join(', ')}.` });
+        }
+
+        // Validate budget
+        if (typeof taskData.budget !== 'number' || taskData.budget <= 0) {
+          return res.status(400).send({ message: 'Budget must be a positive number.' });
+        }
+
+        // Validate category
+        const allowedCategories = ['Web Development', 'Graphic Design', 'Digital Marketing', 'Writing & Translation', 'Video & Animation', 'General']; // Add 'General' or adjust as needed
+        if (!allowedCategories.includes(taskData.category)) {
+          return res.status(400).send({ message: `Invalid category. Allowed categories are: ${allowedCategories.join(', ')}.` });
+        }
+
+        // Validate deadline
+        const deadlineDate = new Date(taskData.deadline);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set today to the beginning of the day for comparison
+
+        if (isNaN(deadlineDate.getTime()) || deadlineDate < today) {
+          return res.status(400).send({ message: 'Deadline must be a valid date and set to a future date.' });
         }
         // Add a timestamp for when the task was created
         taskData.createdAt = new Date();
