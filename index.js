@@ -88,7 +88,7 @@ async function run() {
         res.status(201).send({ message: 'Task created successfully', taskId: result.insertedId });
       } catch (error) {
         console.error('Error creating task:', error);
-        res.status(500).send({ message: 'Failed to create task', error: error.message });
+        res.status(500).send({ message: 'An internal server error occurred while creating the task.', dev_details: error.message });
       }
     });
 
@@ -100,7 +100,7 @@ async function run() {
         res.status(200).send(tasks);
       } catch (error) {
         console.error('Error fetching tasks:', error);
-        res.status(500).send({ message: 'Failed to fetch tasks', error: error.message });
+        res.status(500).send({ message: 'An internal server error occurred while fetching tasks.', dev_details: error.message });
       }
     });
 
@@ -115,7 +115,7 @@ async function run() {
         res.status(200).send(featuredTasks);
       } catch (error) {
         console.error('Error fetching featured tasks:', error);
-        res.status(500).send({ message: 'Failed to fetch featured tasks', error: error.message });
+        res.status(500).send({ message: 'An internal server error occurred while fetching featured tasks.', dev_details: error.message });
       }
     });
 
@@ -134,7 +134,7 @@ async function run() {
         res.status(200).send(task);
       } catch (error) {
         console.error('Error fetching task by ID:', error);
-        res.status(500).send({ message: 'Failed to fetch task', error: error.message });
+        res.status(500).send({ message: 'An internal server error occurred while fetching the task.', dev_details: error.message });
       }
     });
 
@@ -178,7 +178,7 @@ async function run() {
         res.status(200).send({ message: 'Task updated successfully', modifiedCount: result.modifiedCount });
       } catch (error) {
         console.error('Error updating task:', error);
-        res.status(500).send({ message: 'Failed to update task', error: error.message });
+        res.status(500).send({ message: 'An internal server error occurred while updating the task.', dev_details: error.message });
       }
     });
 
@@ -197,7 +197,7 @@ async function run() {
         res.status(200).send({ message: 'Task deleted successfully.' }); // Or 204 No Content
       } catch (error) {
         console.error('Error deleting task:', error);
-        res.status(500).send({ message: 'Failed to delete task', error: error.message });
+        res.status(500).send({ message: 'An internal server error occurred while deleting the task.', dev_details: error.message });
       }
     });
 
@@ -217,7 +217,7 @@ async function run() {
         res.status(200).send(postedTasks);
       } catch (error) {
         console.error('Error fetching posted tasks:', error);
-        res.status(500).send({ message: 'Failed to fetch posted tasks', error: error.message });
+        res.status(500).send({ message: 'An internal server error occurred while fetching your posted tasks.', dev_details: error.message });
       }
     });
 
@@ -288,7 +288,7 @@ async function run() {
 
       } catch (error) {
         console.error('Error placing bid:', error);
-        res.status(500).send({ message: 'Failed to place bid', error: error.message });
+        res.status(500).send({ message: 'An internal server error occurred while placing your bid.', dev_details: error.message });
       }
     });
 
@@ -309,7 +309,7 @@ async function run() {
         res.status(200).send(bids);
       } catch (error) {
         console.error('Error fetching bids for task:', error);
-        res.status(500).send({ message: 'Failed to fetch bids', error: error.message });
+        res.status(500).send({ message: 'An internal server error occurred while fetching bids for the task.', dev_details: error.message });
       }
     });
 
@@ -331,7 +331,7 @@ async function run() {
 
       } catch (error) {
         console.error('Error fetching bids for bidder:', error);
-        res.status(500).send({ message: 'Failed to fetch bids', error: error.message });
+        res.status(500).send({ message: 'An internal server error occurred while fetching your bids.', dev_details: error.message });
       }
     });
 
