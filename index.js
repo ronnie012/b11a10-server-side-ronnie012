@@ -252,9 +252,25 @@ async function run() {
           return res.status(403).send({ message: 'The deadline for bidding on this task has passed.' });
         }
 
-        // Basic validation for bid data
-        if (!bidData.biddingAmount || !bidData.bidderEmail ) {
-          return res.status(400).send({ message: 'Missing required bid fields (biddingAmount, bidderEmail).' });
+        // Enhanced validation for bid data
+        const requiredBidFields = ['biddingAmount', 'bidderEmail'];
+        const missingBidFields = requiredBidFields.filter(field => !(field in bidData) || !bidData[field]);
+
+        if (missingBidFields.length > 0) {
+          return res.status(400).send({ message: `Missing required bid fields: ${missingBidFields.join(', ')}.` });
+        }
+
+        // Validate biddingAmount
+        if (typeof bidData.biddingAmount !== 'number' || bidData.biddingAmount <= 0) {
+          return res.status(400).send({ message: 'Bidding amount must be a positive number.' });
+        }
+
+        // Validate bidderDeadline if provided
+        if (bidData.bidderDeadline) {
+          const bidderDeadlineDate = new Date(bidData.bidderDeadline);
+          if (isNaN(bidderDeadlineDate.getTime())) {
+            return res.status(400).send({ message: 'Bidder deadline must be a valid date format if provided.' });
+          }
         }
 
         const newBid = {
