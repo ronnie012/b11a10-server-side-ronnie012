@@ -2,6 +2,9 @@
 
 This repository contains the server-side API for GigConnect, a freelance marketplace platform. It handles all backend logic, including task management, bidding, and interactions with the MongoDB database.
 
+**Live Site URL:** 
+https://gig-connect-server.vercel.app
+
 ## Tech Stack
 
 *   **Node.js:** JavaScript runtime environment.
