@@ -179,6 +179,28 @@ async function run() {
       }
     });
 
+    // GETting all tasks posted by a specific user (e.g., the current user)
+    // This route must be defined BEFORE '/api/v1/tasks/:id' to avoid misinterpreting 'my-posted-tasks' as an ID.
+    app.get('/api/v1/tasks/my-posted-tasks', async (req, res) => {
+      console.log(`[${new Date().toISOString()}] SERVER HIT: /api/v1/tasks/my-posted-tasks. Query:`, req.query); // Diagnostic log
+      const { tasksCollection } = req.app.locals;
+      // Since there's no server-side authentication, the client must provide the identifier.
+      // We'll use creatorEmail as per your existing similar route.
+      // The client should send this as a query parameter: /api/v1/tasks/my-posted-tasks?creatorEmail=user@example.com
+      const { creatorEmail } = req.query;
+
+      if (!creatorEmail) {
+        return res.status(400).send({ message: 'creatorEmail query parameter is required.' });
+      }
+
+      try {
+        const postedTasks = await tasksCollection.find({ creatorEmail: creatorEmail }).sort({ createdAt: -1 }).toArray();
+        res.status(200).send(postedTasks);
+      } catch (error) {
+        console.error('Error fetching user posted tasks:', error);
+        res.status(500).send({ message: 'An internal server error occurred while fetching your posted tasks.', dev_details: error.message });
+      }
+    });
     // GETting featured tasks (top 6 by soonest deadline)
     app.get('/api/v1/featured-tasks', async (req, res) => {
       const { tasksCollection } = req.app.locals;
@@ -198,18 +220,35 @@ async function run() {
     app.get('/api/v1/tasks/:id', async (req, res) => {
       const { tasksCollection } = req.app.locals;
       const { id } = req.params;
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] GET /tasks/:id - Received ID string: "${id}"`);
+
+      // Detailed check for tasksCollection
+      if (!tasksCollection) {
+        console.error(`[${timestamp}] GET /tasks/:id - FATAL: tasksCollection is undefined or null in app.locals.`);
+        return res.status(500).send({ message: 'Server configuration error: Task collection not initialized.' });
+      }
+      console.log(`[${timestamp}] GET /tasks/:id - tasksCollection type: ${typeof tasksCollection}, collectionName: ${tasksCollection.collectionName}`);
+
       try {
         if (!ObjectId.isValid(id)) {
+          console.log(`[${timestamp}] GET /tasks/:id - Invalid ID format for ID: "${id}"`);
           return res.status(400).send({ message: 'Invalid Task ID format.' });
         }
+        const queryObjectId = new ObjectId(id);
+        const queryForDb = { _id: queryObjectId };
+        console.log(`[${timestamp}] GET /tasks/:id - Attempting tasksCollection.findOne with query:`, JSON.stringify(queryForDb));
+        
         const task = await tasksCollection.findOne({ _id: new ObjectId(id) });
         if (!task) {
+          console.log(`[${timestamp}] GET /tasks/:id - Task NOT FOUND by findOne for ObjectId: "${queryObjectId.toHexString()}"`);
           return res.status(404).send({ message: 'Task not found.' });
         }
+        console.log(`[${timestamp}] GET /tasks/:id - Task FOUND for ObjectId: "${queryObjectId.toHexString()}"`);
         res.status(200).send(task);
       } catch (error) {
-        console.error('Error fetching task by ID:', error);
-        res.status(500).send({ message: 'An internal server error occurred while fetching the task.', dev_details: error.message });
+        console.error(`[${timestamp}] GET /tasks/:id - Error during task retrieval for ID "${id}":`, error);
+        res.status(500).send({ message: 'An internal server error occurred while retrieving the task.', dev_details: error.message });
       }
     });
 
@@ -217,17 +256,23 @@ async function run() {
     app.put('/api/v1/tasks/:id', async (req, res) => {
       const { tasksCollection } = req.app.locals;
       const { id } = req.params;
-      // Created a shallow copy of req.body to safely modify
       const updatePayload = { ...req.body };
 
+      console.log(`[${new Date().toISOString()}] PUT /api/v1/tasks/:id - Received ID: ${id}`);
+      console.log(`[${new Date().toISOString()}] PUT /api/v1/tasks/:id - Received payload:`, JSON.stringify(updatePayload, null, 2));
 
       try {
         if (!ObjectId.isValid(id)) {
+          console.log(`[${new Date().toISOString()}] PUT /api/v1/tasks/:id - Invalid ID format for ID: ${id}`);
           return res.status(400).send({ message: 'Invalid Task ID format.' });
         }
         if (Object.keys(updatePayload).length === 0) { // Checked the copy
+            console.log(`[${new Date().toISOString()}] PUT /api/v1/tasks/:id - Empty update payload for ID: ${id}`);
             return res.status(400).send({ message: 'Request body is empty. No update data provided.' });
         }
+
+        // Log the exact query being made
+        console.log(`[${new Date().toISOString()}] PUT /api/v1/tasks/:id - Querying for _id: new ObjectId("${id}")`);
 
         // Removed _id from updatePayload if present, as it shouldn't be updated
         delete updatePayload._id;
@@ -247,12 +292,15 @@ async function run() {
           { $set: updatePayload } // Used the modified copy
         );
 
+        console.log(`[${new Date().toISOString()}] PUT /api/v1/tasks/:id - Update result for ID ${id}:`, JSON.stringify(result, null, 2));
+
         if (result.matchedCount === 0) {
           return res.status(404).send({ message: 'Task not found.' });
         }
         if (result.modifiedCount === 0 && result.matchedCount === 1) {
             return res.status(200).send({ message: 'Task found but no changes were applied (data might be the same).', modifiedCount: 0 });
         }
+
         res.status(200).send({ message: 'Task updated successfully', modifiedCount: result.modifiedCount });
       } catch (error) {
         console.error('Error updating task:', error);
@@ -272,30 +320,10 @@ async function run() {
         if (result.deletedCount === 0) {
           return res.status(404).send({ message: 'Task not found.' });
         }
-        res.status(200).send({ message: 'Task deleted successfully.' }); // Or 204 No Content
+        res.status(204).send(); // Standard practice for successful deletion with no content to return
       } catch (error) {
         console.error('Error deleting task:', error);
         res.status(500).send({ message: 'An internal server error occurred while deleting the task.', dev_details: error.message });
-      }
-    });
-
-    // GETting all tasks posted by a specific user
-    app.get('/api/v1/my-posted-tasks', async (req, res) => {
-      const { tasksCollection } = req.app.locals;
-      const { creatorEmail } = req.query; // Expecting email as a query parameter
-
-      if (!creatorEmail) {
-        return res.status(400).send({ message: 'creatorEmail query parameter is required.' });
-      }
-
-      try {
-        const postedTasks = await tasksCollection.find({ creatorEmail: creatorEmail })
-                                              .sort({ createdAt: -1 }) // Showed newest first
-                                              .toArray();
-        res.status(200).send(postedTasks);
-      } catch (error) {
-        console.error('Error fetching posted tasks:', error);
-        res.status(500).send({ message: 'An internal server error occurred while fetching your posted tasks.', dev_details: error.message });
       }
     });
 
@@ -426,6 +454,3 @@ async function run() {
   }
 }
 run().catch(console.dir);
-
-
-
