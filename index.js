@@ -223,28 +223,49 @@ async function run() {
       const timestamp = new Date().toISOString();
       console.log(`[${timestamp}] GET /tasks/:id - Received ID string: "${id}"`);
 
-      // Detailed check for tasksCollection
       if (!tasksCollection) {
         console.error(`[${timestamp}] GET /tasks/:id - FATAL: tasksCollection is undefined or null in app.locals.`);
         return res.status(500).send({ message: 'Server configuration error: Task collection not initialized.' });
       }
-      console.log(`[${timestamp}] GET /tasks/:id - tasksCollection type: ${typeof tasksCollection}, collectionName: ${tasksCollection.collectionName}`);
 
       try {
         if (!ObjectId.isValid(id)) {
           console.log(`[${timestamp}] GET /tasks/:id - Invalid ID format for ID: "${id}"`);
           return res.status(400).send({ message: 'Invalid Task ID format.' });
         }
-        const queryObjectId = new ObjectId(id);
-        const queryForDb = { _id: queryObjectId };
-        console.log(`[${timestamp}] GET /tasks/:id - Attempting tasksCollection.findOne with query:`, JSON.stringify(queryForDb));
-        
-        const task = await tasksCollection.findOne({ _id: new ObjectId(id) });
-        if (!task) {
-          console.log(`[${timestamp}] GET /tasks/:id - Task NOT FOUND by findOne for ObjectId: "${queryObjectId.toHexString()}"`);
+
+        const taskObjectId = new ObjectId(id);
+
+        // Use aggregation pipeline to fetch the task and its associated bids
+        const aggregationPipeline = [
+          {
+            $match: { _id: taskObjectId } // Match the specific task
+          },
+          {
+            $lookup: {
+              from: "bids", // The name of the bids collection
+              localField: "_id", // Field from the tasks collection (task's _id)
+              foreignField: "taskId", // Field from the bids collection (bid's taskId)
+              as: "bids" // The new array field to add to the task document
+            }
+          }
+        ];
+
+        console.log(`[${timestamp}] GET /tasks/:id - Attempting aggregation for task ID: "${taskObjectId.toHexString()}"`);
+        const results = await tasksCollection.aggregate(aggregationPipeline).toArray();
+
+        if (results.length === 0) {
+          console.log(`[${timestamp}] GET /tasks/:id - Task NOT FOUND by aggregation for ObjectId: "${taskObjectId.toHexString()}"`);
           return res.status(404).send({ message: 'Task not found.' });
         }
-        console.log(`[${timestamp}] GET /tasks/:id - Task FOUND for ObjectId: "${queryObjectId.toHexString()}"`);
+
+        const task = results[0]; // The result of aggregation is an array
+        if (!task) {
+          // This case should ideally be caught by results.length === 0, but as a safeguard:
+          console.log(`[${timestamp}] GET /tasks/:id - Task somehow null after aggregation for ObjectId: "${taskObjectId.toHexString()}"`);
+          return res.status(404).send({ message: 'Task not found.' });
+        }
+        console.log(`[${timestamp}] GET /tasks/:id - Task FOUND with bids for ObjectId: "${taskObjectId.toHexString()}"`, JSON.stringify(task, null, 2));
         res.status(200).send(task);
       } catch (error) {
         console.error(`[${timestamp}] GET /tasks/:id - Error during task retrieval for ID "${id}":`, error);
@@ -333,7 +354,7 @@ async function run() {
     app.post('/api/v1/tasks/:taskId/bids', async (req, res) => {
       const { tasksCollection, bidsCollection } = req.app.locals;
       const { taskId } = req.params;
-      const bidData = req.body; // Expected: { biddingAmount, bidderEmail, (optional) bidderDeadline, (optional) comment }
+      const bidData = req.body; // Expected: { biddingAmount, bidderEmail, bidderUid, bidderName, (optional) bidderDeadline, (optional) comment }
 
       try {
         if (!ObjectId.isValid(taskId)) {
@@ -382,10 +403,12 @@ async function run() {
         const newBid = {
           taskId: new ObjectId(taskId),
           bidderEmail: bidData.bidderEmail,
+          bidderUid: bidData.bidderUid, // Added: Save the Firebase UID of the bidder
+          bidderName: bidData.bidderName, // Added: Save the display name of the bidder
           biddingAmount: parseFloat(bidData.biddingAmount),
-          bidderDeadline: bidData.bidderDeadline, // Optional: freelancer's proposed deadline
-          comment: bidData.comment, // Optional
-          status: 'pending', // Default status
+          bidderDeadline: bidData.proposedDeadline || bidData.bidderDeadline, // Client sends proposedDeadline, ensure compatibility
+          comment: bidData.comment, 
+          status: 'pending', 
           bidPlacedAt: new Date()
         };
 
