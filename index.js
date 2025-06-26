@@ -28,7 +28,7 @@ async function run() {
     console.log("Successfully connected to MongoDB!"); // Updated log
 
     // Defined database and collections
-    const database = client.db("gigConnectDB");
+    const database = client.db("gigConnectDbUpgraded");
     const tasksCollection = database.collection("tasks");
     const bidsCollection = database.collection("bids");
 
